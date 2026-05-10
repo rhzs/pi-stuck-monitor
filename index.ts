@@ -111,12 +111,18 @@ export default function (pi: ExtensionAPI) {
   // Turn tracking
   // ──────────────────────────────────────────
 
-  pi.on("turn_start", async (event, _ctx) => {
+  pi.on("turn_start", async (event, ctx) => {
     currentTurn = {
       turnIndex: event.turnIndex,
       toolCalls: [],
       startTime: Date.now(),
     };
+
+    // Reset any pending stuck warning from previous turns — each turn starts fresh
+    if (pendingSteerUp) {
+      pendingSteerUp = null;
+      clearSteerUpUi(ctx);
+    }
   });
 
   pi.on("tool_call", async (event, _ctx) => {
