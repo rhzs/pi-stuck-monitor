@@ -1,0 +1,25 @@
+{
+  "name": "pi-stuck-monitor",
+  "version": "0.1.0",
+  "description": "Pi extension that detects repetitive stuck agent behavior and sends rate-limited steer-up nudges.",
+  "type": "module",
+  "scripts": {
+    "test": "tsx --test tests/*.test.mjs"
+  },
+  "keywords": [
+    "pi-package",
+    "pi-extension",
+    "stuck-monitor",
+    "coding-agent"
+  ],
+  "pi": {
+    "extensions": [
+      "./index.ts"
+    ]
+  },
+  "devDependencies": {
+    "@mariozechner/pi-coding-agent": "^0.73.1",
+    "@types/node": "^24.5.0",
+    "tsx": "^4.20.6"
+  }
+}
