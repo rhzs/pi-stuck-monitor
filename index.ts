@@ -56,6 +56,17 @@ interface SteerUpCooldown {
   now: number;
 }
 
+interface DetectionState {
+  history: TurnSummary[];
+  nudgesSent: number;
+  pendingSteerUp: PendingSteerUp | null;
+}
+
+interface TaskCompleteResetResult {
+  state: DetectionState;
+  hadPendingSteerUp: boolean;
+}
+
 const DEFAULT_CONFIG: StuckConfig = {
   maxReadRepeats: 10,
   maxErrorRepeats: 2,
@@ -100,11 +111,24 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("agent_end", async (_event, ctx) => {
-    if (!pendingSteerUp) return;
+    // Task completed: reset detection state so the next task starts with a clean
+    // slate. Without this, history (no-mutation streaks, error streaks, repeated
+    // reads) carries over and the next task immediately trips false positives.
+    // lastSteerUpAt is intentionally preserved so the cooldown stays wall-clock.
+    const { state, hadPendingSteerUp } = resetStateOnTaskComplete({
+      history,
+      nudgesSent,
+      pendingSteerUp,
+    });
+    history = state.history;
+    nudgesSent = state.nudgesSent;
+    pendingSteerUp = state.pendingSteerUp;
 
-    pendingSteerUp = null;
     clearSteerUpUi(ctx);
-    ctx.ui.notify("✅ Task completed; removed pending stuck-monitor steer-up", "info");
+
+    if (hadPendingSteerUp) {
+      ctx.ui.notify("✅ Task completed; removed pending stuck-monitor steer-up", "info");
+    }
   });
 
   // ──────────────────────────────────────────
@@ -393,6 +417,19 @@ export function resolveSteerUpAfterTurn(
   }
 
   return { messageToSend: pending.message, nextPending: null };
+}
+
+export function resetStateOnTaskComplete(
+  state: DetectionState,
+): TaskCompleteResetResult {
+  return {
+    state: {
+      history: [],
+      nudgesSent: 0,
+      pendingSteerUp: null,
+    },
+    hadPendingSteerUp: state.pendingSteerUp !== null,
+  };
 }
 
 export function isSteerUpCooldownActive(cooldown: SteerUpCooldown): boolean {
